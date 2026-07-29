@@ -1,0 +1,81 @@
+From: Arnd Bergmann <arnd@arndb.de>
+
+Starting with c23, 'constexpr' is a keyword in C like in C++ and cannot
+be used as an identifier:
+
+scripts/unifdef.c:206:25: error: 'constexpr' can only be used in variable declarations
+  206 | static bool             constexpr;              /* constant #if expression */
+      |                         ^
+scripts/unifdef.c:880:13: error: expected identifier or '('
+  880 |                 constexpr = false;
+      |                           ^
+
+Rename this instance to allow changing to C23 at some point in the future.
+
+Cc: Masahiro Yamada <masahiroy@kernel.org>
+Cc: Nathan Chancellor <nathan@kernel.org>
+Cc: Nicolas Schier <nicolas@fjasle.eu>
+Cc: linux-kbuild@vger.kernel.org
+Reviewed-By: Tony Finch <dot@dotat.at>
+Signed-off-by: Arnd Bergmann <arnd@arndb.de>
+---
+ v2: include fixup from Tony
+---
+ scripts/unifdef.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/scripts/unifdef.c b/scripts/unifdef.c
+index db00e3e30a59..ff15efd6e7d7 100644
+--- a/scripts/unifdef.c
++++ b/scripts/unifdef.c
+@@ -188,7 +188,7 @@ static int              depth;			/* current #if nesting */
+ static int              delcount;		/* count of deleted lines */
+ static unsigned         blankcount;		/* count of blank lines */
+ static unsigned         blankmax;		/* maximum recent blankcount */
+-static bool             constexpr;		/* constant #if expression */
++static bool             constexpression;	/* constant #if expression */
+ 
+ static int              exitstat;		/* program exit status */
+ 
+@@ -715,7 +715,7 @@ static const struct ops {
+ /*
+  * Function for evaluating the innermost parts of expressions,
+  * viz. !expr (expr) number defined(symbol) symbol
+- * We reset the constexpr flag in the last two cases.
++ * We reset the constexpression flag in the last two cases.
+  */
+ static Linetype
+ eval_unary(const struct ops *ops, int *valp, const char **cpp)
+@@ -773,7 +773,7 @@ eval_unary(const struct ops *ops, int *valp, const char **cpp)
+ 		cp = skipcomment(cp);
+ 		if (defparen && *cp++ != ')')
+ 			return (LT_ERROR);
+-		constexpr = false;
++		constexpression = false;
+ 	} else if (!endsym(*cp)) {
+ 		debug("eval%d symbol", ops - eval_ops);
+ 		sym = findsym(cp);
+@@ -791,7 +791,7 @@ eval_unary(const struct ops *ops, int *valp, const char **cpp)
+ 			lt = *valp ? LT_TRUE : LT_FALSE;
+ 			cp = skipargs(cp);
+ 		}
+-		constexpr = false;
++		constexpression = false;
+ 	} else {
+ 		debug("eval%d bad expr", ops - eval_ops);
+ 		return (LT_ERROR);
+@@ -851,10 +851,10 @@ ifeval(const char **cpp)
+ 	int val = 0;
+ 
+ 	debug("eval %s", *cpp);
+-	constexpr = killconsts ? false : true;
++	constexpression = killconsts ? false : true;
+ 	ret = eval_table(eval_ops, &val, cpp);
+ 	debug("eval = %d", val);
+-	return (constexpr ? LT_IF : ret == LT_ERROR ? LT_IF : ret);
++	return (constexpression ? LT_IF : ret == LT_ERROR ? LT_IF : ret);
+ }
+ 
+ /*
+-- 
+2.39.2
