@@ -1799,9 +1799,7 @@ CT_Mirrors()
         base="${version%%-*}"
         yymm="${version##*-??}"
         yymm="${yymm%%-*}"
-        echo "https://releases.linaro.org/components/toolchain/${project}-linaro/${version}"
-        echo "https://releases.linaro.org/archive/${yymm}/components/toolchain/${project}-linaro/${base}"
-        echo "https://releases.linaro.org/archive/${yymm}/components/toolchain/${project}-linaro"
+        echo "https://developer.arm.com/-/cdn-downloads/permalink/legacy-linaro-gnu-toolchains/${version}"
         ;;
     kernel.org)
         case "${project}" in
