@@ -33,6 +33,7 @@ config GLIBC_DEP_KERNEL_HEADERS_VERSION
 config GLIBC_DEP_BINUTILS
     def_bool y
     select BINUTILS_REQUIRE_2_25_or_later if GLIBC_2_26_or_later
+    select BINUTILS_REQUIRE_2_39_or_later if GLIBC_2_42_or_later
     select BINUTILS_REQUIRE_older_than_2_30 if GLIBC_older_than_2_26 && ARCH_ARM && ARCH_64
 
 # Glibc 2.26 requires GCC4.9 or newer
@@ -45,6 +46,7 @@ config GLIBC_DEP_GCC
     select GCC_REQUIRE_5_or_later if GLIBC_2_29_or_later
     select GCC_REQUIRE_6_or_later if GLIBC_2_29_or_later && ARCH_POWERPC && ARCH_64 && ARCH_LE
     select GCC_REQUIRE_6_or_later if GLIBC_2_30_or_later
+    select GCC_REQUIRE_12_or_later if GLIBC_2_42_or_later
 
 # Glibc 2.29 requires bison 2.7 or later. All versions in ct-ng satisfy that
 # version requirement.
@@ -168,11 +170,11 @@ config GLIBC_HAS_DEPRECATED_LIBCRYPT
     def_bool y
     depends on GLIBC_2_28_or_later
 
-# As of 2.38 libcrypt is no longer built by default. It will likely be removed in a future
-# version.
+# As of 2.38 libcrypt is no longer built by default. It was completely removed
+# as of 2.39
 config GLIBC_HAS_OBSOLETE_LIBCRYPT
     def_bool y
-    depends on GLIBC_2_38_or_later
+    depends on GLIBC_2_38_or_later && !GLIBC_2_39_or_later
     select XCRYPT_TARGET
 
 config GLIBC_EXTRA_CONFIG_ARRAY
@@ -311,6 +313,12 @@ comment "WARNING!                                                      "
 comment "|  Building GLIBC locales requires that GLIBC supports        "
 comment "|  the build machine as the target.                           "
 endif # LIBC_GLIBC && GLIBC_LOCALES
+
+# Older Glibc versions are incompatible with newer makeinfo versions. Skip
+# building the user manual if needed.
+config GLIBC_MAKEINFO_WORKAROUND
+    def_bool y
+    depends on GLIBC_2_23_or_older
 
 if KERNEL_LINUX
 

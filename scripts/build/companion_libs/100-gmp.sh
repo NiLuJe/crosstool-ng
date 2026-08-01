@@ -77,7 +77,7 @@ do_gmp_for_target() {
             prefix="/usr"
             ;;
     esac
-    gmp_opts+=( "cflags=${CT_ALL_TARGET_CFLAGS}" )
+    gmp_opts+=( "cflags=${CT_ALL_TARGET_CFLAGS} ${CT_GMP_EXTRA_CFLAGS}" )
     gmp_opts+=( "prefix=${prefix}" )
     gmp_opts+=( "destdir=${CT_SYSROOT_DIR}" )
     gmp_opts+=( "shared=${CT_SHARED_LIBS}" )
@@ -127,7 +127,7 @@ do_gmp_backend() {
     # CC_FOR_BUILD and CPP_FOR_BUILD.
     CT_DoExecLog CFG                                \
     CC_FOR_BUILD="${CT_BUILD}-gcc"                  \
-    CPP_FOR_BUILD="{CT_BUILD}-cpp"                  \
+    CPP_FOR_BUILD="${CT_BUILD}-cpp"                 \
     CC="${host}-gcc"                                \
     CFLAGS="${cflags} -fexceptions"                 \
     LDFLAGS="${ldflags}"                            \

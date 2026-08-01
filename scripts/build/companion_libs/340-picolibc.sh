@@ -26,13 +26,7 @@ do_picolibc_common_install() {
 
     yn_args="IO_C99FMT:io-c99-formats
 IO_LL:io-long-long
-REGISTER_FINI:newlib-register-fini
 NANO_MALLOC:newlib-nano-malloc
-ATEXIT_DYNAMIC_ALLOC:newlib-atexit-dynamic-alloc
-GLOBAL_ATEXIT:newlib-global-atexit
-LITE_EXIT:lite-exit
-MULTITHREAD:newlib-multithread
-RETARGETABLE_LOCKING:newlib-retargetable-locking
     "
 
     for ynarg in $yn_args; do
@@ -47,6 +41,24 @@ RETARGETABLE_LOCKING:newlib-retargetable-locking
             picolibc_opts+=( "-D$argument=false" )
         fi
     done
+
+    # Check how picolibc wants threading support to be specified
+
+    if grep -q single-thread "${CT_SRC_DIR}/picolibc/meson_options.txt"; then
+	if [ "${CT_LIBC_PICOLIBC_MULTITHREAD}" = "y" ]; then
+	    picolibc_opts+=("-Dsingle-thread=false")
+	else
+	    picolibc_opts+=("-Dsingle-thread=true")
+	fi
+    else
+	if [ "${CT_LIBC_PICOLIBC_MULTITHREAD}" = "y" ]; then
+	    picolibc_opts+=("-Dnewlib-retargetable-locking=true")
+	    picolibc_opts+=("-Dnewlib-multithread=true")
+	else
+	    picolibc_opts+=("-Dnewlib-retargetable-locking=false")
+	    picolibc_opts+=("-Dnewlib-multithread=false")
+	fi
+    fi
 
     [ "${CT_LIBC_PICOLIBC_EXTRA_SECTIONS}" = "y" ] && \
         CT_LIBC_PICOLIBC_TARGET_CFLAGS="${CT_LIBC_PICOLIBC_TARGET_CFLAGS} -ffunction-sections -fdata-sections"
@@ -150,11 +162,15 @@ do_cc_libstdcxx_picolibc()
     final_opts+=( "lang_list=c,c++" )
     final_opts+=( "build_step=libstdcxx" )
     final_opts+=( "extra_config+=('--enable-stdio=stdio_pure')" )
+    final_opts+=( "extra_config+=('--with-headers=${CT_PREFIX_DIR}/picolibc/include')" )
     if [ "${CT_PICOLIBC_older_than_1_8}" = "y" ]; then
 	final_opts+=( "extra_config+=('--disable-wchar_t')" )
     fi
     if [ "${CT_LIBC_PICOLIBC_ENABLE_TARGET_OPTSPACE}" = "y" ]; then
         final_opts+=( "enable_optspace=yes" )
+    fi
+    if [ -n "${CT_LIBC_PICOLIBC_GCC_LIBSTDCXX_TARGET_CXXFLAGS}" ]; then
+        final_opts+=( "extra_cxxflags_for_target=${CT_LIBC_PICOLIBC_GCC_LIBSTDCXX_TARGET_CXXFLAGS}" )
     fi
 
     if [ "${CT_BARE_METAL}" = "y" ]; then

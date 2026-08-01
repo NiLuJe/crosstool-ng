@@ -10,7 +10,8 @@ jobs:
     runs-on: ${{ matrix.host }}
     strategy:
       matrix:
-        host: ["ubuntu-22.04", "macos-12"]
+        # host: ["ubuntu-22.04", "macos-14"]
+        host: ["ubuntu-22.04"]
     steps:
       - name: "clone"
         uses: actions/checkout@v4
@@ -22,7 +23,7 @@ jobs:
         if: ${{ runner.os == 'macOS' }}
         run: |
           brew install autoconf automake bash binutils gawk gnu-sed \
-               gnu-tar help2man make ncurses texinfo libtool
+               gnu-tar help2man libtool make meson ncurses ninja texinfo
       - name: "build ct-ng"
         run: |
           if [ "$RUNNER_OS" == "macOS" ]; then
@@ -85,7 +86,7 @@ jobs:
       - name: "ct-ng source"
         run: |
           mkdir -p src
-          for sample in aarch64-unknown-linux-gnu arm-picolibc-eabi \
+          for sample in aarch64-unknown-linux-gnu arm-none-eabi \
                 arm-unknown-linux-musleabi armv6-nommu-linux-uclibcgnueabi \
                 x86_64-w64-mingw32; do \
                 ct-ng $sample; \
@@ -95,6 +96,7 @@ jobs:
                 sed -i -e 's/^.*CT_COMP_TOOLS_BISON.*$/CT_COMP_TOOLS_BISON=y/' .config; \
                 sed -i -e 's/^.*CT_COMP_TOOLS_M4.*$/CT_COMP_TOOLS_M4=y/' .config; \
                 sed -i -e 's/^.*CT_COMP_TOOLS_MAKE.*$/CT_COMP_TOOLS_MAKE=y/' .config; \
+                sed -i -e 's/^.*CT_DOWNLOAD_WGET_OPTIONS.*$/CT_DOWNLOAD_WGET_OPTIONS="--tries=3 -nc --progress=dot:binary --no-use-server-timestamps"/' .config; \
                 ct-ng olddefconfig; \
                 ct-ng source; \
           done
@@ -129,6 +131,7 @@ jobs:
           "powerpc64-unknown-linux-musl",
           "riscv32-unknown-elf",
           "riscv64-unknown-elf",
+          "riscv64-unknown-linux-gnu",
           "s390-unknown-linux-gnu",
           "sh-unknown-elf",
           "sparc-unknown-linux-gnu",

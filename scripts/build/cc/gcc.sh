@@ -282,6 +282,7 @@ do_gcc_core_backend() {
         gcc_build|gcc_host)
             CT_DoLog EXTRA "Configuring final gcc compiler"
             extra_config+=( "${CT_CC_SYSROOT_ARG[@]}" )
+            extra_config+=( "--with-headers=${CT_PREFIX_DIR}/${CT_TARGET}/include" )
             extra_user_config=( "${CT_CC_GCC_EXTRA_CONFIG_ARRAY[@]}" )
             log_txt="final gcc compiler"
             # to inhibit the libiberty and libgcc tricks later on
@@ -388,16 +389,32 @@ do_gcc_core_backend() {
         "") extra_config+=("--disable-libstdcxx-verbose");;
     esac
 
+    if [ "${build_libstdcxx}" = "yes" ]; then
+        if [ "x${CT_CC_GCC_LIBSTDCXX}" = "x" ]; then
+            build_libstdcxx="no"
+        elif [ "${CT_CC_GCC_LIBSTDCXX}" = "y" ]; then
+            extra_config+=("--enable-libstdcxx")
+        fi
+
+        if [ "${CT_LIBC_AVR_LIBC}" = "y" ]; then
+            extra_config+=("--enable-cstdio=stdio_pure")
+        fi
+
+        if [ "${CT_CC_GCC_LIBSTDCXX_HOSTED_DISABLE}" = "y" ]; then
+            extra_config+=("--disable-libstdcxx-hosted")
+        fi
+    fi
+
     if [ "${build_libstdcxx}" = "no" ]; then
         extra_config+=(--disable-libstdcxx)
     fi
 
     if [ "${CT_LIBC_PICOLIBC}" = "y" ]; then
-	extra_config+=("--with-default-libc=picolibc")
-	extra_config+=("--enable-stdio=pure")
-	if [ "${CT_PICOLIBC_older_than_1_8}" = "y" ]; then
-	    extra_config+=("--disable-wchar_t")
-	fi
+        extra_config+=("--with-default-libc=picolibc")
+        extra_config+=("--enable-stdio=pure")
+        if [ "${CT_PICOLIBC_older_than_1_8}" = "y" ]; then
+            extra_config+=("--disable-wchar_t")
+        fi
     fi
 
     core_LDFLAGS+=("${ldflags}")
@@ -493,6 +510,12 @@ do_gcc_core_backend() {
         "") ;;
         *)  extra_config+=( "--enable-decimal-float=${CT_CC_GCC_DEC_FLOATS}" );;
     esac
+
+    if [ "${CT_CC_GCC_ENABLE_PLUGINS}" = "y" ]; then
+        extra_config+=( --enable-plugin )
+    else
+        extra_config+=( --disable-plugin )
+    fi
 
     case "${CT_ARCH}" in
         mips)
@@ -659,6 +682,7 @@ do_gcc_core_backend() {
         --exec_prefix="${exec_prefix}"                 \
         --with-local-prefix="${CT_SYSROOT_DIR}"        \
         "${extra_config[@]}"                           \
+        --disable-libatomic                            \
         --enable-languages="${lang_list}"              \
         "${extra_user_config[@]}"
 
@@ -714,9 +738,7 @@ do_gcc_core_backend() {
     else # build_libgcc
         core_targets=( gcc )
     fi   # ! build libgcc
-    if [    "${build_libstdcxx}" = "yes"    \
-         -a "${CT_CC_LANG_CXX}"  = "y"      \
-       ]; then
+    if [ "${build_libstdcxx}" = "yes" ]; then
         core_targets+=( target-libstdc++-v3 )
     fi
 
@@ -827,9 +849,7 @@ do_cc_for_build() {
         # lack of such a compiler, but better safe than sorry...
         build_final_opts+=( "mode=baremetal" )
         build_final_opts+=( "build_libgcc=yes" )
-        if [ "${CT_LIBC_NONE}" != "y" ]; then
-            build_final_opts+=( "build_libstdcxx=yes" )
-        fi
+        build_final_opts+=( "build_libstdcxx=yes" )
         build_final_opts+=( "build_libgfortran=yes" )
         if [ "${CT_STATIC_TOOLCHAIN}" = "y" ]; then
             build_final_opts+=( "build_staticlinked=yes" )
@@ -912,15 +932,14 @@ do_cc_for_host() {
     final_opts+=( "ldflags=${CT_LDFLAGS_FOR_HOST}" )
     final_opts+=( "lang_list=$( cc_gcc_lang_list )" )
     final_opts+=( "build_step=gcc_host" )
+    final_opts+=( "extra_cxxflags_for_target=${CT_CC_GCC_LIBSTDCXX_TARGET_CXXFLAGS}" )
     if [ "${CT_BUILD_MANUALS}" = "y" ]; then
         final_opts+=( "build_manuals=yes" )
     fi
     if [ "${CT_BARE_METAL}" = "y" ]; then
         final_opts+=( "mode=baremetal" )
         final_opts+=( "build_libgcc=yes" )
-        if [ "${CT_LIBC_NONE}" != "y" ]; then
-            final_opts+=( "build_libstdcxx=yes" )
-        fi
+        final_opts+=( "build_libstdcxx=yes" )
         final_opts+=( "build_libgfortran=yes" )
         if [ "${CT_STATIC_TOOLCHAIN}" = "y" ]; then
             final_opts+=( "build_staticlinked=yes" )
@@ -1092,16 +1111,24 @@ do_gcc_backend() {
         "") extra_config+=("--disable-libstdcxx-verbose");;
     esac
     
-    if [ "${build_libstdcxx}" = "no" ]; then
+    if [ "x${CT_CC_GCC_LIBSTDCXX}" = "x" ]; then
         extra_config+=(--disable-libstdcxx)
-    elif [ "${CT_CC_GCC_EXTRA_LIBSTDCXX}" = "y" ]; then
+    elif [ "${CT_CC_GCC_LIBSTDCXX}" = "y" ]; then
         extra_config+=(--enable-libstdcxx)
     fi
 
+    if [ "${CT_CC_GCC_LIBSTDCXX_HOSTED_DISABLE}" = "y" ]; then
+        extra_config+=("--disable-libstdcxx-hosted")
+    fi
+
+    if [ "${CT_LIBC_AVR_LIBC}" = "y" ]; then
+        extra_config+=("--enable-cstdio=stdio_pure")
+    fi
+
     if [ "${CT_LIBC_PICOLIBC}" = "y" ]; then
-	extra_config+=("--with-default-libc=picolibc")
-	extra_config+=("--enable-stdio=pure")
-	extra_config+=("--disable-wchar_t")
+        extra_config+=("--with-default-libc=picolibc")
+        extra_config+=("--enable-stdio=pure")
+        extra_config+=("--disable-wchar_t")
     fi
 
     final_LDFLAGS+=("${ldflags}")
@@ -1166,6 +1193,10 @@ do_gcc_backend() {
         else
             extra_config+=("--enable-threads=posix")
         fi
+    fi
+
+    if [ "${CT_CC_GCC_ENABLE_DEFAULT_PIE}" = "y" ]; then
+        extra_config+=("--enable-default-pie")
     fi
 
     if [ "${CT_CC_GCC_ENABLE_TARGET_OPTSPACE}" = "y" ] || \
